@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 
 EVOLUTION_BASE_URL = os.getenv("EVOLUTION_BASE_URL", "https://evolution-evolution.lmpta7.easypanel.host")
-EVOLUTION_INSTANCIA = os.getenv("EVOLUTION_INSTANCIA", "automacao-whatsapp")
+EVOLUTION_INSTANCIA = os.getenv("EVOLUTION_INSTANCIA", "automação-whatsapp")
 EVOLUTION_APIKEY = os.getenv("EVOLUTION_APIKEY", "5f2a8c4b7d1e9f3c6b0d4a7e2c9f1b8d")
 
 @app.route("/enviar-mensagem", methods=["POST"])
