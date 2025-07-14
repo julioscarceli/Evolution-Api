@@ -1,19 +1,31 @@
-import os
 import requests
+import base64
 from flask import Flask, request, jsonify
+from config import EVOLUTION_BASE_URL, EVOLUTION_INSTANCE, EVOLUTION_TOKEN, PORT
 
 app = Flask(__name__)
 
-# Configurações da Z-API
-ZAPI_INSTANCE_ID = os.getenv("ZAPI_INSTANCE_ID", "3E41CFD6E358C17CE6F98258D1F0342D")
-ZAPI_TOKEN = os.getenv("ZAPI_TOKEN", "0805E5918986E2F446970EAB")
-ZAPI_CLIENT_TOKEN = os.getenv("ZAPI_CLIENT_TOKEN", "F3344a9f851a041f2a24ec073eb47e5e0S")
-
-ZAPI_URL = f"https://api.z-api.io/instances/{ZAPI_INSTANCE_ID}/token/{ZAPI_TOKEN}/send-document/pdf"
+# URL completa da Evolution API
+EVOLUTION_URL = f"{EVOLUTION_BASE_URL}/message/sendMedia/{EVOLUTION_INSTANCE}"
 
 
 def formatar_mensagem(texto: str) -> str:
     return texto.replace("\\n", "\n")
+
+
+def baixar_arquivo_base64(url_arquivo: str) -> str:
+    """Faz download de um arquivo e retorna em base64"""
+    response = requests.get(url_arquivo)
+    response.raise_for_status()
+    return base64.b64encode(response.content).decode("utf-8")
+
+
+def formatar_numero(numero: str) -> str:
+    """Formata o número para o padrão da Evolution API"""
+    numero = ''.join(filter(str.isdigit, numero))
+    if not numero.startswith("55"):
+        numero = f"55{numero}"
+    return f"{numero}@s.whatsapp.net"
 
 
 @app.route("/enviar-pdf", methods=["POST"])
@@ -29,20 +41,27 @@ def enviar_pdf_cliente():
         if not all([phone, mensagem, nome_arquivo, url_arquivo]):
             return jsonify({"erro": "Campos obrigatórios faltando."}), 400
 
+        numero_formatado = formatar_numero(phone)
+        pdf_base64 = baixar_arquivo_base64(url_arquivo)
+
         payload = {
-            "phone": phone,
-            "document": url_arquivo,
+            "number": numero_formatado,
+            "options": {
+                "delay": 100,
+                "presence": "composing"
+            },
+            "mediatype": "document",
             "fileName": nome_arquivo,
-            "caption": mensagem
+            "caption": mensagem,
+            "media": pdf_base64
         }
 
         headers = {
             "Content-Type": "application/json",
-            "client-token": ZAPI_CLIENT_TOKEN
+            "apikey": EVOLUTION_TOKEN
         }
 
-        response = requests.post(ZAPI_URL, headers=headers, json=payload)
-
+        response = requests.post(EVOLUTION_URL, headers=headers, json=payload)
         return jsonify({
             "status": response.status_code,
             "resposta": response.text
@@ -77,20 +96,27 @@ def enviar_pdf_controle():
             f"Número do pedido : {numero_pedido}"
         )
 
+        numero_formatado = formatar_numero(phone)
+        pdf_base64 = baixar_arquivo_base64(url_arquivo)
+
         payload = {
-            "phone": phone,
-            "document": url_arquivo,
+            "number": numero_formatado,
+            "options": {
+                "delay": 100,
+                "presence": "composing"
+            },
+            "mediatype": "document",
             "fileName": nome_arquivo,
-            "caption": mensagem
+            "caption": mensagem,
+            "media": pdf_base64
         }
 
         headers = {
             "Content-Type": "application/json",
-            "client-token": ZAPI_CLIENT_TOKEN
+            "apikey": EVOLUTION_TOKEN
         }
 
-        response = requests.post(ZAPI_URL, headers=headers, json=payload)
-
+        response = requests.post(EVOLUTION_URL, headers=headers, json=payload)
         return jsonify({
             "status": response.status_code,
             "resposta": response.text
@@ -106,4 +132,6 @@ def ping():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+    app.run(host="0.0.0.0", port=PORT)
+
+
