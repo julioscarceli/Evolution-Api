@@ -1,5 +1,6 @@
 import requests
 import base64
+import re
 from flask import Flask, request, jsonify
 from config import EVOLUTION_BASE_URL, EVOLUTION_INSTANCE, EVOLUTION_TOKEN, PORT
 
@@ -28,6 +29,15 @@ def formatar_numero(numero: str) -> str:
     return f"{numero}@s.whatsapp.net"
 
 
+def limpar_nome_arquivo(nome: str) -> str:
+    """Remove espaços, acentos e caracteres especiais do nome do arquivo"""
+    nome = re.sub(r"[^\w\s-]", "", nome)  # Remove caracteres especiais
+    nome = nome.strip().replace(" ", "_")  # Substitui espaços por _
+    if not nome.lower().endswith(".pdf"):
+        nome += ".pdf"
+    return nome
+
+
 @app.route("/enviar-pdf", methods=["POST"])
 def enviar_pdf_cliente():
     try:
@@ -35,7 +45,7 @@ def enviar_pdf_cliente():
 
         phone = data.get("phone")
         mensagem = formatar_mensagem(data.get("mensagem", ""))
-        nome_arquivo = data.get("nome_arquivo")
+        nome_arquivo = limpar_nome_arquivo(data.get("nome_arquivo", "documento.pdf"))
         url_arquivo = data.get("arquivo")
 
         if not all([phone, mensagem, nome_arquivo, url_arquivo]):
@@ -81,7 +91,7 @@ def enviar_pdf_controle():
         qtd_persianas = data.get("quantidade_persianas")
         numero_pedido = data.get("numero_pedido")
         url_arquivo = data.get("arquivo")
-        nome_arquivo = data.get("nome_arquivo")
+        nome_arquivo = limpar_nome_arquivo(data.get("nome_arquivo", "pedido.pdf"))
         phone = "5511986152909"
 
         if not all([nome_cliente, endereco, qtd_persianas, numero_pedido, url_arquivo, nome_arquivo]):
